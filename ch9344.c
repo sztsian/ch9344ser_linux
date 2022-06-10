@@ -952,7 +952,7 @@ transmit:
 	return sendlen;
 }
 
-static int ch9344_tty_write_room(struct tty_struct *tty)
+static unsigned int ch9344_tty_write_room(struct tty_struct *tty)
 {
 	struct ch9344 *ch9344 = tty->driver_data;
 	/*
@@ -962,7 +962,7 @@ static int ch9344_tty_write_room(struct tty_struct *tty)
 	return ch9344_wb_is_avail(ch9344) ? ch9344->writesize : 0;
 }
 
-static int ch9344_tty_chars_in_buffer(struct tty_struct *tty)
+static unsigned int ch9344_tty_chars_in_buffer(struct tty_struct *tty)
 {
 	struct ch9344 *ch9344 = tty->driver_data;
 	/*
@@ -2197,7 +2197,8 @@ static int __init ch9344_init(void)
 {
 	int retval;
 
-	ch9344_tty_driver = alloc_tty_driver(CH9344_TTY_MINORS);
+	//ch9344_tty_driver = alloc_tty_driver(CH9344_TTY_MINORS);
+	ch9344_tty_driver = tty_alloc_driver(CH9344_TTY_MINORS, TTY_DRIVER_REAL_RAW | TTY_DRIVER_RESET_TERMIOS | TTY_DRIVER_DYNAMIC_DEV);
 	if (!ch9344_tty_driver)
 		return -ENOMEM;
 	ch9344_tty_driver->driver_name = "ch9344",
@@ -2214,14 +2215,14 @@ static int __init ch9344_init(void)
 
 	retval = tty_register_driver(ch9344_tty_driver);
 	if (retval) {
-		put_tty_driver(ch9344_tty_driver);
+		tty_driver_kref_put(ch9344_tty_driver);
 		return retval;
 	}
 
 	retval = usb_register(&ch9344_driver);
 	if (retval) {
 		tty_unregister_driver(ch9344_tty_driver);
-		put_tty_driver(ch9344_tty_driver);
+		tty_driver_kref_put(ch9344_tty_driver);
 		return retval;
 	}
 	printk(KERN_INFO KBUILD_MODNAME ": " DRIVER_DESC "\n");
@@ -2234,7 +2235,7 @@ static void __exit ch9344_exit(void)
 {
 	usb_deregister(&ch9344_driver);
 	tty_unregister_driver(ch9344_tty_driver);
-	put_tty_driver(ch9344_tty_driver);
+	tty_driver_kref_put(ch9344_tty_driver);
 	idr_destroy(&ch9344_minors);
 	printk(KERN_INFO KBUILD_MODNAME ": " "ch9344 driver exit.\n");
 }
